@@ -10,7 +10,6 @@
             margin: 0;
             padding: 0;
         }
-
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #0a0c10;
@@ -18,12 +17,10 @@
             padding: 16px;
             padding-bottom: 80px;
         }
-
         .container {
             max-width: 600px;
             margin: 0 auto;
         }
-
         .logo {
             text-align: center;
             margin-bottom: 20px;
@@ -38,7 +35,6 @@
             font-size: 12px;
             color: #888;
         }
-
         .card {
             background: #14161c;
             border-radius: 24px;
@@ -47,7 +43,6 @@
             border: 1px solid #2a2e3a;
             box-shadow: 0 8px 16px rgba(0,0,0,0.3);
         }
-
         .card-title {
             font-size: 20px;
             font-weight: 600;
@@ -57,18 +52,15 @@
             align-items: center;
             gap: 8px;
         }
-
         .form-group {
             margin-bottom: 16px;
         }
-
         label {
             display: block;
             font-size: 13px;
             color: #aaa;
             margin-bottom: 5px;
         }
-
         input, select, textarea {
             width: 100%;
             padding: 12px;
@@ -79,18 +71,15 @@
             font-size: 15px;
             transition: 0.2s;
         }
-
         input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #ffd966;
             box-shadow: 0 0 0 2px rgba(255,217,102,0.2);
         }
-
         textarea {
             resize: vertical;
             min-height: 80px;
         }
-
         .row-2 {
             display: flex;
             gap: 12px;
@@ -98,7 +87,6 @@
         .row-2 > * {
             flex: 1;
         }
-
         button {
             background: #ffd966;
             color: #0a0c10;
@@ -111,18 +99,15 @@
             transition: 0.2s;
             width: 100%;
         }
-
         button:active {
             transform: scale(0.97);
             background: #e0b843;
         }
-
         .result-buttons {
             display: flex;
             gap: 12px;
             margin-top: 8px;
         }
-
         .result-btn {
             flex: 1;
             background: #2a2e3a;
@@ -136,7 +121,6 @@
             background: #e74c3c;
             color: white;
         }
-
         .stats-grid {
             display: flex;
             justify-content: space-between;
@@ -157,7 +141,6 @@
             font-size: 11px;
             color: #aaa;
         }
-
         .winrate-bar {
             margin-top: 16px;
             height: 8px;
@@ -179,7 +162,6 @@
             margin-top: 6px;
             color: #aaa;
         }
-
         .trade-item {
             background: #0a0c10;
             border-radius: 20px;
@@ -222,7 +204,6 @@
         .delete-btn:active {
             transform: none;
         }
-
         .tab-bar {
             position: fixed;
             bottom: 0;
@@ -267,7 +248,6 @@
         <div class="tab" data-tab="history">📋 История</div>
     </div>
 
-    <!-- Вкладка: Форма -->
     <div id="formTab" class="tab-content">
         <div class="card">
             <div class="card-title">📝 Запись сделки</div>
@@ -321,7 +301,6 @@
         </div>
     </div>
 
-    <!-- Вкладка: Статистика -->
     <div id="statsTab" class="tab-content hidden">
         <div class="card">
             <div class="card-title">📈 Моя статистика</div>
@@ -353,7 +332,6 @@
         </div>
     </div>
 
-    <!-- Вкладка: История -->
     <div id="historyTab" class="tab-content hidden">
         <div class="card">
             <div class="card-title">📋 Последние сделки</div>
@@ -365,10 +343,22 @@
 </div>
 
 <script>
+    // Получаем объект Telegram WebApp и данные авторизации
     let tg = window.Telegram?.WebApp;
+    let initData = tg ? tg.initData : '';
     if (tg) {
         tg.expand();
         tg.enableClosingConfirmation();
+    }
+
+    // Универсальная функция для fetch с авторизацией
+    async function authorizedFetch(url, options = {}) {
+        const headers = options.headers || {};
+        if (initData) {
+            headers['Authorization'] = 'Bearer ' + initData;
+        }
+        options.headers = headers;
+        return fetch(url, options);
     }
 
     let selectedResult = 'plus';
@@ -398,9 +388,8 @@
             alert('Заполните дату, время и актив');
             return;
         }
-        if (data.risk > 5) alert('Риск более 5% не рекомендуется!');
         try {
-            const response = await fetch('/api/trades', {
+            const response = await authorizedFetch('/api/trades', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -412,16 +401,18 @@
                 loadStats();
                 loadHistory();
             } else {
-                alert('Ошибка при сохранении');
+                const err = await response.json();
+                alert('Ошибка: ' + (err.error || 'неизвестная'));
             }
         } catch (e) {
-            alert('Ошибка сети');
+            alert('Ошибка сети: ' + e.message);
         }
     });
 
     async function loadStats() {
         try {
-            const res = await fetch('/api/stats');
+            const res = await authorizedFetch('/api/stats');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
             const stats = await res.json();
             document.getElementById('totalTrades').innerText = stats.total;
             document.getElementById('winrate').innerText = stats.winrate + '%';
@@ -430,12 +421,15 @@
             const total = stats.plus + stats.minus;
             const percent = total ? (stats.plus / total * 100) : 0;
             document.getElementById('winrateBar').style.width = percent + '%';
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error('Stats error', e);
+        }
     }
 
     async function loadHistory() {
         try {
-            const res = await fetch('/api/trades');
+            const res = await authorizedFetch('/api/trades');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
             const trades = await res.json();
             const container = document.getElementById('tradesList');
             if (trades.length === 0) {
@@ -461,7 +455,9 @@
                 `;
             });
             container.innerHTML = html;
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error('History error', e);
+        }
     }
 
     // Удаление сделки
@@ -469,12 +465,16 @@
         if (e.target.classList.contains('delete-btn')) {
             const tradeId = e.target.getAttribute('data-id');
             if (confirm('Удалить эту сделку?')) {
-                const res = await fetch(`/api/trades/${tradeId}`, { method: 'DELETE' });
-                if (res.ok) {
-                    loadHistory();
-                    loadStats();
-                } else {
-                    alert('Ошибка удаления');
+                try {
+                    const res = await authorizedFetch(`/api/trades/${tradeId}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        loadHistory();
+                        loadStats();
+                    } else {
+                        alert('Ошибка удаления');
+                    }
+                } catch (err) {
+                    alert('Ошибка сети');
                 }
             }
         }
@@ -501,6 +501,7 @@
         });
     });
 
+    // Инициализация
     loadStats();
     loadHistory();
     const today = new Date().toISOString().split('T')[0];
