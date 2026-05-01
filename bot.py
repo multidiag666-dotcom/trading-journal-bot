@@ -3,12 +3,18 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
 BOT_TOKEN = '8278666246:AAG7oK_1ODMCagxo9XlDckUnhsvB7eX3iE8'
-
-# ⚠️ ЗАМЕНИ ЭТУ СТРОКУ ПОСЛЕ ДЕПЛОЯ НА РЕАЛЬНЫЙ HTTPS-АДРЕС РЕНДЕРА
-WEBAPP_URL = 'https://твой-сервис.onrender.com'   # ВРЕМЕННО ТАК, ПОТОМ ЗАМЕНИ
+WEBAPP_URL = 'https://trading-journal-bot-dukr.onrender.com'  # финальный URL
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
+# Отключаем обработку сигналов (чтобы избежать ошибки в потоке)
+import signal
+for sig in (signal.SIGINT, signal.SIGTERM):
+    try:
+        signal.signal(sig, signal.SIG_IGN)
+    except Exception:
+        pass
 
 menu_keyboard = types.ReplyKeyboardMarkup(
     keyboard=[
